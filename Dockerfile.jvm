@@ -1,0 +1,26 @@
+ARG BASE_IMAGE=cc-builder:base
+FROM ${BASE_IMAGE}
+
+LABEL description="Claude Code TDD Builder - JVM (Java/Kotlin/Spring Boot)"
+
+ENV CC_DEFAULT_LANGUAGE=java
+
+USER root
+
+# === JAVA 21 + GRADLE 8.5 (from official images, multi-arch) ===
+COPY --from=eclipse-temurin:21-jdk /opt/java/openjdk /opt/java
+COPY --from=gradle:8.5-jdk21 /opt/gradle /opt/gradle
+
+ENV JAVA_HOME="/opt/java"
+ENV GRADLE_HOME="/opt/gradle"
+ENV PATH="${JAVA_HOME}/bin:${GRADLE_HOME}/bin:$PATH"
+
+# === TEMPLATES ===
+COPY jvm/templates/ /opt/jvm-templates/
+COPY jvm/bin/init-jvm-project /usr/local/bin/init-jvm-project
+RUN chmod +x /usr/local/bin/init-jvm-project
+
+# === VERIFY ===
+RUN java -version && gradle --version
+
+USER root

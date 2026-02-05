@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""
+cc-tdd - Claude Code TDD Builder
+
+Story → Production-Ready Code
+
+Usage:
+    cc-tdd --story story.md --config config.yaml
+    cc-tdd --help
+"""
+
+import sys
+import os
+
+# Add orchestrator to path
+sys.path.insert(0, '/opt/cc-builder')
+
+from orchestrator.cli import main
+
+if __name__ == '__main__':
+    sys.exit(main())

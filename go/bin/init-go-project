@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+TEMPLATES_DIR="/opt/go-templates"
+
+echo "Initializing Go project with best practices..."
+
+# Copy CLAUDE.md if it doesn't exist
+[ ! -f CLAUDE.md ] && cp "$TEMPLATES_DIR/CLAUDE.md" .
+[ ! -f AGENTS.md ] && cp "$TEMPLATES_DIR/AGENTS.md" .
+mkdir -p .github
+[ ! -f .github/copilot-instructions.md ] && cp "$TEMPLATES_DIR/copilot-instructions.md" .github/copilot-instructions.md
+
+# Create standard directories
+mkdir -p cmd internal/api internal/domain internal/storage features/steps docs
+
+echo "Project initialized with:"
+echo "  - CLAUDE.md (project documentation)"
+echo "  - Standard Go project structure"

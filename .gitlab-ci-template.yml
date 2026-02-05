@@ -1,0 +1,81 @@
+# CC-Builder GitLab CI Template
+#
+# Usage in your .gitlab-ci.yml:
+#
+#   include:
+#     - remote: 'https://raw.githubusercontent.com/your-org/cc-builder/main/.gitlab-ci-template.yml'
+#
+#   variables:
+#     CC_BUILDER_IMAGE: "registry.gitlab.com/your-org/cc-builder:go"
+#     CLAUDE_CODE_OAUTH_TOKEN: $CLAUDE_CODE_OAUTH_TOKEN
+#
+#   implement-story:
+#     extends: .cc-builder
+#     variables:
+#       STORY: "REST API für User Management"
+#       COVERAGE_TARGET: "80"
+
+.cc-builder:
+  image: ${CC_BUILDER_IMAGE:-registry.gitlab.com/your-org/cc-builder:go}
+  variables:
+    LANGUAGE: "auto"
+    COVERAGE_TARGET: "80"
+    MAX_ITERATIONS: "10"
+    BRANCH_NAME: "feature/issue-${CI_PIPELINE_ID}"
+  script:
+    # Run cc-builder with story from variable or file
+    - |
+      if [ -f "$STORY" ]; then
+        cat "$STORY" | cc-tdd \
+          --language $LANGUAGE \
+          --coverage $COVERAGE_TARGET \
+          --max-iterations $MAX_ITERATIONS \
+          --branch $BRANCH_NAME
+      else
+        echo "$STORY" | cc-tdd \
+          --language $LANGUAGE \
+          --coverage $COVERAGE_TARGET \
+          --max-iterations $MAX_ITERATIONS \
+          --branch $BRANCH_NAME
+      fi
+
+    # Push branch
+    - git push origin $BRANCH_NAME
+
+    # Create MR
+    - |
+      if [ "$CREATE_MR" != "false" ]; then
+        curl --request POST \
+          --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests" \
+          --data "source_branch=$BRANCH_NAME" \
+          --data "target_branch=$CI_DEFAULT_BRANCH" \
+          --data "title=feat: AI-generated implementation" \
+          --data "description=$(cat REPORT.md 2>/dev/null | head -100 | jq -sRr @uri)"
+      fi
+  artifacts:
+    paths:
+      - REPORT.md
+      - STORY.md
+      - features/
+    expire_in: 1 week
+  rules:
+    - if: $STORY
+      when: always
+
+# Convenience job for issue-triggered generation
+.cc-builder-from-issue:
+  extends: .cc-builder
+  variables:
+    ISSUE_IID: ""
+  before_script:
+    # Fetch issue content as story
+    - |
+      curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/issues/$ISSUE_IID" \
+        | jq -r '"\(.title)\n\n\(.description)"' > /tmp/story.md
+      export STORY="/tmp/story.md"
+      export BRANCH_NAME="feature/issue-$ISSUE_IID"
+  rules:
+    - if: $ISSUE_IID
+      when: always

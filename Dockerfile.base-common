@@ -1,0 +1,61 @@
+FROM ubuntu:24.04 AS base-common
+
+LABEL maintainer="cc-builder"
+LABEL description="Claude Code TDD Builder - Common Base (no CLI)"
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# === SYSTEM DEPENDENCIES ===
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    jq \
+    unzip \
+    zip \
+    ca-certificates \
+    gnupg \
+    gosu \
+    && rm -rf /var/lib/apt/lists/*
+
+# === NODE.JS (needed by both CLIs) ===
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# === PYTHON 3.12 (for Orchestrator) ===
+RUN apt-get update && apt-get install -y \
+    python3.12 \
+    python3.12-venv \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.12 /usr/bin/python
+
+# === PYTHON DEPENDENCIES ===
+RUN pip3 install --break-system-packages pyyaml
+
+# === ORCHESTRATOR ===
+COPY orchestrator/ /opt/cc-builder/orchestrator/
+COPY bin/cc-tdd /usr/local/bin/cc-tdd
+COPY bin/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/cc-tdd /usr/local/bin/entrypoint.sh
+
+# === NON-ROOT USER ===
+RUN useradd -m -s /bin/bash builder \
+    && mkdir -p /workspace \
+    && chown -R builder:builder /workspace
+
+# === GIT CONFIG (for builder user) ===
+RUN su - builder -c 'git config --global user.email "cc-builder@local" && git config --global user.name "CC Builder"'
+
+# === WORKSPACE ===
+WORKDIR /workspace
+
+# === ENVIRONMENT ===
+ENV ANTHROPIC_API_KEY=""
+ENV CC_BACKEND=""
+ENV PYTHONUNBUFFERED=1
+
+# === ENTRYPOINT ===
+ENTRYPOINT ["entrypoint.sh"]

@@ -1,0 +1,10 @@
+FROM cc-builder:base-common
+
+LABEL description="Claude Code TDD Builder - Base Image (Claude Code CLI)"
+
+# === CLAUDE CODE CLI ===
+RUN npm install -g @anthropic-ai/claude-code
+
+# === ENVIRONMENT ===
+ENV CC_BACKEND=claude
+ENV CLAUDE_CODE_OAUTH_TOKEN=""

@@ -1,0 +1,85 @@
+ARG BASE_IMAGE=cc-builder:base
+FROM ${BASE_IMAGE}
+
+LABEL description="Claude Code TDD Builder - Electron/TypeScript (Full Dev Environment)"
+
+ENV CC_DEFAULT_LANGUAGE=electron
+
+# === SYSTEM DEPENDENCIES (as root) ===
+USER root
+
+# Core dependencies for Electron and headless testing
+RUN apt-get update && apt-get install -y \
+    # Electron core
+    libgtk-3-0 \
+    libnotify4 \
+    libnss3 \
+    libxss1 \
+    libxtst6 \
+    xdg-utils \
+    libatspi2.0-0 \
+    libdrm2 \
+    libgbm1 \
+    libasound2t64 \
+    libsecret-1-0 \
+    # X virtual framebuffer for headless
+    xvfb \
+    # Fonts
+    fonts-liberation \
+    fonts-noto-color-emoji \
+    # Build tools
+    build-essential \
+    # Cross-platform build deps (for Windows builds via Wine)
+    wine64 \
+    # macOS builds need these
+    libopenjp2-7 \
+    && rm -rf /var/lib/apt/lists/*
+
+# === GLOBAL NPM PACKAGES ===
+RUN npm install -g \
+    # TypeScript tooling
+    typescript@5 \
+    ts-node \
+    esbuild \
+    # Testing
+    @cucumber/cucumber \
+    jest \
+    ts-jest \
+    @playwright/test \
+    # Linting
+    eslint \
+    @typescript-eslint/eslint-plugin \
+    @typescript-eslint/parser \
+    # Electron
+    electron \
+    electron-builder \
+    # Coverage
+    nyc \
+    c8 \
+    # Types
+    @types/node \
+    @types/jest
+
+# Install Playwright browsers and their dependencies
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+RUN npx playwright install chromium
+RUN npx playwright install-deps chromium || true
+
+# === COPY TEMPLATES AND SCRIPTS ===
+COPY electron/templates/ /opt/electron-templates/
+COPY electron/bin/init-electron-project /usr/local/bin/init-electron-project
+RUN chmod +x /usr/local/bin/init-electron-project
+
+# === VERIFY INSTALLATION ===
+USER builder
+RUN echo "=== Verifying installation ===" && \
+    node --version && \
+    npm --version && \
+    tsc --version && \
+    esbuild --version && \
+    eslint --version && \
+    npx playwright --version && \
+    npx cucumber-js --version && \
+    echo "=== All tools verified ==="
+
+USER root

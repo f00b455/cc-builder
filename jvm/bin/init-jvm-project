@@ -1,0 +1,48 @@
+#!/bin/bash
+set -e
+
+# Use /opt/jvm-templates in Docker, fallback to relative path for local dev
+if [ -d "/opt/jvm-templates" ]; then
+    TEMPLATES_DIR="/opt/jvm-templates"
+else
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    TEMPLATES_DIR="${SCRIPT_DIR}/../templates"
+fi
+
+echo "Initializing Spring Boot microservice..."
+
+# Copy CLAUDE.md
+[ ! -f CLAUDE.md ] && cp "$TEMPLATES_DIR/CLAUDE.md" .
+[ ! -f AGENTS.md ] && cp "$TEMPLATES_DIR/AGENTS.md" .
+mkdir -p .github
+[ ! -f .github/copilot-instructions.md ] && cp "$TEMPLATES_DIR/copilot-instructions.md" .github/copilot-instructions.md
+
+# Copy build files
+[ ! -f build.gradle.kts ] && cp "$TEMPLATES_DIR/build.gradle.kts" .
+[ ! -f settings.gradle.kts ] && cp "$TEMPLATES_DIR/settings.gradle.kts" .
+
+# Copy application config
+mkdir -p src/main/resources
+[ ! -f src/main/resources/application.yaml ] && cp "$TEMPLATES_DIR/src/main/resources/application.yaml" src/main/resources/
+
+# Copy base Java classes
+BASE_PKG="src/main/java/de/prehcm"
+mkdir -p "$BASE_PKG"/{config,controller,service,repository,model,dto,exception}
+mkdir -p src/test/java/de/prehcm
+mkdir -p features/steps
+
+[ ! -f "$BASE_PKG/Application.java" ] && cp "$TEMPLATES_DIR/$BASE_PKG/Application.java" "$BASE_PKG/"
+[ ! -f "$BASE_PKG/exception/GlobalExceptionHandler.java" ] && cp "$TEMPLATES_DIR/$BASE_PKG/exception/GlobalExceptionHandler.java" "$BASE_PKG/exception/"
+[ ! -f "$BASE_PKG/exception/ResourceNotFoundException.java" ] && cp "$TEMPLATES_DIR/$BASE_PKG/exception/ResourceNotFoundException.java" "$BASE_PKG/exception/"
+
+# Generate Gradle wrapper if not present
+if [ ! -f gradlew ]; then
+    gradle wrapper --gradle-version 8.5 2>/dev/null || true
+fi
+
+echo "Project initialized with:"
+echo "  - Spring Boot 3.2 (Web, JPA, Validation, Actuator)"
+echo "  - JaCoCo (coverage)"
+echo "  - Cucumber-JVM (BDD)"
+echo "  - H2 (test) / PostgreSQL (production)"
+echo "  - K8s health probes (actuator)"
