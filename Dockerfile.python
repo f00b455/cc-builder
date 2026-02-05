@@ -1,0 +1,20 @@
+ARG BASE_IMAGE=cc-builder:base
+FROM ${BASE_IMAGE}
+
+LABEL description="Claude Code TDD Builder - Python"
+
+ENV CC_DEFAULT_LANGUAGE=python
+
+# === UV (from official image, multi-arch) ===
+COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /uvx /usr/local/bin/
+
+# === BDD + COVERAGE TOOLS ===
+RUN uv pip install --system --break-system-packages \
+    behave \
+    coverage \
+    pytest \
+    pytest-cov \
+    pytest-bdd
+
+# === VERIFY ===
+RUN python3 --version && behave --version && coverage --version

@@ -1,0 +1,44 @@
+{
+  "requiredDevDependencies": [
+    "@playwright/test",
+    "playwright"
+  ],
+  "scripts": {
+    "build": "tsc && npm run build:renderer && npm run copy:static",
+    "build:renderer": "esbuild src/renderer/renderer.ts --bundle --outfile=dist/renderer/renderer.js --platform=browser --sourcemap",
+    "copy:static": "cp src/renderer/*.html src/renderer/*.css dist/renderer/ 2>/dev/null || true",
+    "start": "npm run build && electron .",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:e2e": "xvfb-run --auto-servernum playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "cucumber": "cucumber-js",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "validate": "npm run lint && npm run test:coverage && npm run cucumber && npm run build",
+    "dist": "electron-builder",
+    "dist:linux": "electron-builder --linux",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.app.electron",
+    "productName": "App",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": ["AppImage", "deb"]
+    },
+    "mac": {
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    }
+  }
+}

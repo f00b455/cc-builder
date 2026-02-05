@@ -1,0 +1,51 @@
+#!/bin/bash
+set -e
+
+TEMPLATES_DIR="/opt/electron-templates"
+
+echo "Initializing Electron project with best practices..."
+
+# Copy template files if they don't exist
+[ ! -f CLAUDE.md ] && cp "$TEMPLATES_DIR/CLAUDE.md" .
+[ ! -f AGENTS.md ] && cp "$TEMPLATES_DIR/AGENTS.md" .
+mkdir -p .github
+[ ! -f .github/copilot-instructions.md ] && cp "$TEMPLATES_DIR/copilot-instructions.md" .github/copilot-instructions.md
+[ ! -f eslint.config.js ] && cp "$TEMPLATES_DIR/eslint.config.js" .
+[ ! -f tsconfig.json ] && cp "$TEMPLATES_DIR/tsconfig.json" .
+[ ! -f jest.config.js ] && cp "$TEMPLATES_DIR/jest.config.js" .
+[ ! -f playwright.config.ts ] && cp "$TEMPLATES_DIR/playwright.config.ts" .
+[ ! -f cucumber.js ] && cp "$TEMPLATES_DIR/cucumber.js" .
+
+# Create e2e directory with template test
+mkdir -p e2e
+[ ! -f e2e/app.spec.ts ] && cp "$TEMPLATES_DIR/e2e/app.spec.ts" e2e/
+
+# Merge scripts from template into package.json
+if [ -f package.json ]; then
+  node -e "
+    const pkg = require('./package.json');
+    const template = require('$TEMPLATES_DIR/package.template.json');
+    pkg.scripts = { ...pkg.scripts, ...template.scripts };
+    pkg.build = template.build;
+    pkg.build.productName = pkg.name || 'App';
+    require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+  "
+fi
+
+# Install required devDependencies if missing
+if [ -f package.json ]; then
+  for dep in "@playwright/test"; do
+    if ! node -e "require('$dep')" 2>/dev/null; then
+      echo "  Installing missing dependency: $dep"
+      npm install --save-dev "$dep" --silent 2>/dev/null || true
+    fi
+  done
+fi
+
+echo "✓ Project initialized with:"
+echo "  - ESLint (with Electron-specific rules)"
+echo "  - TypeScript"
+echo "  - Jest (unit tests)"
+echo "  - Cucumber (BDD tests)"
+echo "  - Playwright (E2E tests)"
+echo "  - electron-builder (packaging)"

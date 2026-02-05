@@ -1,0 +1,10 @@
+FROM cc-builder:base-common
+
+LABEL description="Claude Code TDD Builder - Base Image (OpenCode CLI)"
+
+# === OPENCODE CLI ===
+RUN npm install -g opencode-ai
+
+# === ENVIRONMENT ===
+ENV CC_BACKEND=opencode
+ENV OPENCODE_MODEL=github-copilot/gpt-5.1-codex
